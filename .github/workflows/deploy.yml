@@ -1,7 +1,6 @@
 name: Deploy to GitHub Pages
 on:
-  push:
-    branches: [ main ]
+  push: { branches: [main] }
   workflow_dispatch:
 
 permissions:
@@ -17,22 +16,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '20' }
+        with: { node-version: '20', cache: 'pnpm' }
       - run: npm i -g pnpm
       - run: pnpm install
       - run: pnpm build
-      - name: Show build tree
-        run: |
-            ls -la
-            echo "----- dist -----"
-            ls -la dist || true
-            echo "----- dist/public -----"
-            ls -la dist/public || true
+      # If your build outputs to dist/public, change both lines below to dist/public
       - name: Add 404 fallback for SPA
-        run: cp dist/public/index.html dist/public/404.html
-
+        run: cp dist/index.html dist/404.html || true
+      - name: Show what we'll publish (debug)
+        run: |
+          echo "== dist =="
+          ls -la dist || true
+          echo "== dist/public =="
+          ls -la dist/public || true
       - uses: actions/upload-pages-artifact@v3
-        with: { path: ./dist }
+        with: { path: ./dist }   # <-- set to ./dist/public if that’s where index.html is
   deploy:
     needs: build
     runs-on: ubuntu-latest
