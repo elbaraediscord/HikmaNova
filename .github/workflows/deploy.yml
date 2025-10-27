@@ -22,7 +22,7 @@ jobs:
       - run: pnpm build
       # If your build outputs to dist/public, change both lines below to dist/public
       - name: Add 404 fallback for SPA
-        run: cp dist/index.html dist/404.html || true
+        run: cp dist/public/index.html dist/public/404.html || true
       - name: Show what we'll publish (debug)
         run: |
           echo "== dist =="
@@ -30,7 +30,7 @@ jobs:
           echo "== dist/public =="
           ls -la dist/public || true
       - uses: actions/upload-pages-artifact@v3
-        with: { path: ./dist }   # <-- set to ./dist/public if that’s where index.html is
+        with: { path: ./dist/public }   # <-- set to ./dist/public if that’s where index.html is
   deploy:
     needs: build
     runs-on: ubuntu-latest
