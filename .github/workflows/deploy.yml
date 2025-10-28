@@ -1,6 +1,8 @@
 name: Deploy to GitHub Pages
+
 on:
-  push: { branches: [main] }
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -8,29 +10,58 @@ permissions:
   pages: write
   id-token: write
 
-concurrency: { group: "pages", cancel-in-progress: true }
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-      - run: npm i -g pnpm
-      # or use Corepack:
-      # - run: corepack enable
-      # - run: corepack prepare pnpm@latest --activate
+        with:
+          node-version: '20'
+
+      # pnpm via Corepack (more reliable than global install)
+      - run: corepack enable
+      - run: corepack prepare pnpm@latest --activate
+
       - run: pnpm install
       - run: pnpm build
-      - name: Add 404 fallback for SPA
-        run: cp dist/index.html dist/404.html || true
+
+      # Show what's in the build output (won't fail if a folder is missing)
       - name: Debug build output
         run: |
-          echo "=== DIST CONTENTS ==="
-          ls -R dist 
+          echo "=== dist ==="
+          ls -la dist || true
+          echo "=== dist/public ==="
+          ls -la dist/public || true
+
+      # Pick the correct publish folder (dist OR dist/public)
+      - name: Choose artifact path
+        id: choose_path
+        shell: bash
+        run: |
+          if [ -f "dist/index.html" ]; then
+            echo "path=dist" >> $GITHUB_OUTPUT
+          elif [ -f "dist/public/index.html" ]; then
+            echo "path=dist/public" >> $GITHUB_OUTPUT
+          else
+            echo "No index.html found in dist or dist/public"; exit 1
+          fi
+          echo "Chosen path: $(cat $GITHUB_OUTPUT)"
+
+      # SPA refresh fallback
+      - name: Add 404 fallback for SPA
+        run: cp "${{ steps.choose_path.outputs.path }}/index.html" "${{ steps.choose_path.outputs.path }}/404.html" || true
+
+      # Upload the chosen folder
       - uses: actions/upload-pages-artifact@v3
-        with: { path: ./dist }
+        with:
+          path: ${{ steps.choose_path.outputs.path }}
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
