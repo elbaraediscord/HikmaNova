@@ -25,6 +25,10 @@ jobs:
       - run: pnpm build
       - name: Add 404 fallback for SPA
         run: cp dist/index.html dist/404.html || true
+      - name: Debug build output
+        run: |
+          echo "=== DIST CONTENTS ==="
+          ls -R dist 
       - uses: actions/upload-pages-artifact@v3
         with: { path: ./dist }
   deploy:
